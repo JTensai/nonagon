@@ -121,4 +121,7 @@ export const ICONS = {
   nest: '<rect x="3" y="3" width="14" height="14" rx="2"/><rect x="7.5" y="7.5" width="5" height="5" rx="1"/><path d="M10 3v4.5M10 12.5V17M3 10h4.5M12.5 10H17"/>',
   help: '<circle cx="10" cy="10" r="7"/><path d="M8 8a2 2 0 113 1.7c-.7.4-1 .8-1 1.6M10 14h0"/>',
   out: '<path d="M8 4H4v12h4M12 6l4 4-4 4M16 10H8"/>',
+  settings: '<circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/>',
+  sun: '<circle cx="10" cy="10" r="3.4"/><path d="M10 2.5v1.8M10 15.7v1.8M2.5 10h1.8M15.7 10h1.8M4.7 4.7l1.3 1.3M14 14l1.3 1.3M4.7 15.3L6 14M14 6l1.3-1.3"/>',
+  moon: '<path d="M15.5 12.5A6.5 6.5 0 017.5 4.5a6.5 6.5 0 108 8z"/>',
 };

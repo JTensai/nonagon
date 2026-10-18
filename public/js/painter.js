@@ -2,8 +2,8 @@
 import { buildItems, computeProgress, contentBounds } from './layout.js';
 
 const LIGHT = {
-  bg: '#E4E9E3', block: 'rgba(30,48,42,0.07)', paper: '#FBFCF9', ink: '#1E2925', mute: '#73817B',
-  line: 'rgba(30,48,42,0.16)', moss: '#2F5D4B', mossInk: '#F2F6F1', brass: '#B5893A', brassSoft: '#F1E6CC',
+  bg: '#ECECEE', block: 'rgba(30,32,40,0.06)', paper: '#FFFFFF', ink: '#1F2024', mute: '#77787F',
+  line: 'rgba(30,32,40,0.16)', moss: '#F08C7B', mossInk: '#3A1D17', brass: '#B5893A', brassSoft: '#F1E6CC',
 };
 
 function rr(ctx, x, y, w, h, r) {
@@ -43,7 +43,8 @@ export function paintBoard(canvas, board, { mode = 'nested', size = 1600, pad = 
   c.height = size * dpr;
   const ctx = c.getContext('2d');
   ctx.scale(dpr, dpr);
-  const C = LIGHT;
+  const css = getComputedStyle(document.documentElement);
+  const C = { ...LIGHT, moss: css.getPropertyValue('--moss').trim() || LIGHT.moss, mossInk: css.getPropertyValue('--moss-ink').trim() || LIGHT.mossInk };
   const progress = computeProgress(board);
   const fit = contentBounds(board, mode, null);
   const scale = (size * (1 - pad * 2)) / fit.s;

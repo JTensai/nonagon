@@ -104,24 +104,42 @@ export function nodeAt(board, mode, px, py, minS) {
   }
 }
 
-// Bounding square of everything the nested view draws (for "zoom out to all").
-export function contentBounds(board, mode, focusId) {
+// ---- nested view geometry -------------------------------------------------
+// The nested view is drawn relative to the open square ("frame"): its 3x3 block
+// sits in the middle at size 1, and each step's own 3x3 block surrounds it at
+// RING x that size. Each node's frame has a fixed place in one shared space, so
+// moving between frames is just a change of coordinates.
+export const RING = 0.8;
+export const GAP = 0.07;
+export const OFF = 0.5 + GAP + RING / 2;
+export const NESTED_EXTENT = 2 * (OFF + RING / 2);
+
+export function frameOf(board, id) {
+  const path = pathTo(board, id);
+  let ox = 0, oy = 0, sc = 1;
+  for (let k = 1; k < path.length; k++) {
+    const parent = board.nodes[path[k - 1]];
+    const [dx, dy] = dirOf(parent.children.indexOf(path[k]));
+    ox += dx * OFF * sc;
+    oy += dy * OFF * sc;
+    sc *= RING;
+  }
+  return { ox, oy, sc };
+}
+
+export function lowestCommonAncestor(board, a, b) {
+  const pa = pathTo(board, a);
+  const pb = new Set(pathTo(board, b));
+  let lca = board.rootId;
+  for (const id of pa) if (pb.has(id)) lca = id;
+  return lca;
+}
+
+// Bounding square of what a view draws (for "zoom out to all").
+export function contentBounds(board, mode, frameId) {
   if (mode !== 'nested') return { x: 0, y: 0, s: 1 };
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  const hasKids = (id) => liveChildren(board, id).length > 0;
-  const walk = (id, x, y, s) => {
-    const b = s / 3;
-    x0 = Math.min(x0, x - b / 2); x1 = Math.max(x1, x + b / 2);
-    y0 = Math.min(y0, y - b / 2); y1 = Math.max(y1, y + b / 2);
-    board.nodes[id].children.forEach((c, i) => {
-      if (!c || !board.nodes[c]) return;
-      if (!hasKids(c) && c !== focusId && id !== focusId) return;
-      const [dx, dy] = dirOf(i);
-      walk(c, x + (dx * s) / 3, y + (dy * s) / 3, s / 3);
-    });
-  };
-  walk(board.rootId, 0, 0, 1);
-  return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, s: Math.max(x1 - x0, y1 - y0) };
+  const id = frameId || board.rootId;
+  return liveChildren(board, id).length ? { x: 0, y: 0, s: NESTED_EXTENT } : { x: 0, y: 0, s: 1 };
 }
 
 const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
@@ -129,7 +147,7 @@ const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 // Produce the list of visible items for a camera.
 // cam: { cx, cy, scale, vw, vh, ox, oy, T }  (ox/oy = screen point the camera centre maps to)
 // Item: { key, kind, role, nodeId, parentId, slot, x, y, size, opacity }
-export function buildItems(board, cam, mode, minPx = 5, focusId = null) {
+export function buildItems(board, cam, mode, minPx = 5, focusId = null, frameId = null) {
   const out = [];
   const nodes = board.nodes;
   const hasKids = (id) => nodes[id].children.some((c) => c && nodes[c]);
@@ -140,7 +158,7 @@ export function buildItems(board, cam, mode, minPx = 5, focusId = null) {
   const visible = (x, y, s) =>
     x + s / 2 >= left && x - s / 2 <= right && y + s / 2 >= top && y - s / 2 <= bottom;
 
-  const cells = (id, x, y, s, op) => {
+  const cells = (id, x, y, s, op, peek) => {
     const c = s / 3;
     const n = nodes[id];
     out.push({ key: 'k' + id, kind: 'block', nodeId: id, x, y, size: s, opacity: op });
@@ -151,30 +169,25 @@ export function buildItems(board, cam, mode, minPx = 5, focusId = null) {
       if (!visible(cx, cy, c)) continue;
       const cid = n.children[i];
       if (cid && nodes[cid]) {
-        out.push({ key: 'n' + cid + '@s', kind: 'node', role: 'child', nodeId: cid, parentId: id, slot: i, x: cx, y: cy, size: c, opacity: op });
+        out.push({ key: 'n' + cid + '@s', kind: 'node', role: 'child', nodeId: cid, parentId: id, slot: i, x: cx, y: cy, size: c, opacity: op, peek: peek && hasKids(cid) });
       } else {
         out.push({ key: 'e' + id + ':' + i, kind: 'empty', parentId: id, slot: i, x: cx, y: cy, size: c, opacity: op });
       }
     }
   };
 
-  const mandala = (id, x, y, s) => {
-    if (!visible(x, y, s)) return;
-    const blockPx = (s / 3) * cam.scale;
-    if (blockPx / 3 < minPx) {
-      out.push({ key: 'b' + id, kind: 'blob', nodeId: id, x, y, size: s / 3, opacity: 1 });
-      return;
-    }
-    cells(id, x, y, s / 3, 1);
-    const n = nodes[id];
+  // Nested: the open square's block, plus each step's block around it.
+  // Cells in the outer blocks that have steps of their own show a small map of them.
+  const nested = (frame) => {
+    cells(frame, 0, 0, 1, 1, false);
+    const n = nodes[frame];
     for (let i = 0; i < 8; i++) {
       const c = n.children[i];
       if (!c || !nodes[c]) continue;
-      // A step that hasn't been broken down only shows its empty grid when it's
-      // open or next to the open square — otherwise the chart fills with blank grids.
-      if (!hasKids(c) && c !== focusId && id !== focusId) continue;
       const [dx, dy] = dirOf(i);
-      mandala(c, x + (dx * s) / 3, y + (dy * s) / 3, s / 3);
+      const x = dx * OFF, y = dy * OFF;
+      if (!visible(x, y, RING)) continue;
+      cells(c, x, y, RING, 1, true);
     }
   };
 
@@ -199,7 +212,7 @@ export function buildItems(board, cam, mode, minPx = 5, focusId = null) {
     }
   };
 
-  if (mode === 'nested') mandala(board.rootId, 0, 0, 1);
+  if (mode === 'nested') nested(frameId && nodes[frameId] ? frameId : board.rootId);
   else fractal(board.rootId, 0, 0, 1, 1);
   return out;
 }

@@ -2,6 +2,7 @@ import { $, esc, sheet, toast, menu, ICONS } from './ui.js';
 import { store, makeBoard, exampleBoard } from './store.js';
 import { computeProgress, depthOf } from './layout.js';
 import { paintBoard } from './painter.js';
+import { openSettings, toggleTheme, isDarkNow } from './settings.js';
 
 const fmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
 
@@ -13,6 +14,10 @@ export class Home {
     this.unsub = null;
     this.thumbCache = new Map();
     $('[data-act=account]', root).onclick = (e) => this.accountMenu(e.currentTarget);
+    $('[data-act=theme]', root).onclick = () => toggleTheme();
+    window.addEventListener('nonagon:prefs', (e) => {
+      if (e.detail.key === 'accent' || e.detail.key === 'theme') { this.thumbCache.clear(); if (this.list) this.render(); }
+    });
     $('.new-goal-form', root).onsubmit = (e) => { e.preventDefault(); this.create(e.target.goal.value); };
     $('[data-act=example]', root).onclick = () => this.createExample();
   }
@@ -112,7 +117,12 @@ export class Home {
   }
 
   accountMenu(anchor) {
-    const items = [{ label: 'Open an example goal', icon: ICONS.grid, run: () => this.createExample() }];
+    const items = [
+      { label: 'Settings', icon: ICONS.settings, run: () => openSettings() },
+      { label: isDarkNow() ? 'Light mode' : 'Dark mode', icon: isDarkNow() ? ICONS.sun : ICONS.moon, run: () => toggleTheme() },
+      { label: 'Open an example goal', icon: ICONS.grid, run: () => this.createExample() },
+      '-',
+    ];
     items.push({ label: this.user.demo ? 'Leave demo' : 'Sign out', icon: ICONS.out, run: () => this.onSignOut() });
     menu(anchor, items);
   }

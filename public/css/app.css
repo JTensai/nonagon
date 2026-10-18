@@ -1,46 +1,51 @@
-/* Nonagon — calm, premium goal grids.
-   Palette: fog ground, paper tiles, moss for the goal, brass for progress. */
+/* Nonagon: calm, premium goal grids.
+   Neutral greys so any accent works; the accent marks the open square. Gold marks progress.
+   The accent (--moss, --moss-2, --moss-ink) is set from Settings by js/settings.js. */
 :root {
   --font: 'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --fog: #E4E9E3;
-  --fog-2: #D9E0D9;
-  --paper: #FBFCF9;
-  --ink: #1E2925;
-  --ink-2: #44524C;
-  --mute: #73817B;
-  --line: rgba(30, 48, 42, 0.14);
-  --line-2: rgba(30, 48, 42, 0.26);
-  --block: rgba(30, 48, 42, 0.065);
-  --moss: #2F5D4B;
-  --moss-2: #3B7059;
-  --moss-ink: #F2F6F1;
-  --brass: #B5893A;
-  --brass-2: #D7B46E;
-  --brass-soft: #F2E7CE;
-  --danger: #A2463B;
-  --shadow-tile: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 1px 2px rgba(22, 40, 34, 0.08), 0 6px 18px -10px rgba(22, 40, 34, 0.28);
-  --shadow-float: 0 1px 2px rgba(22, 40, 34, 0.08), 0 18px 40px -18px rgba(22, 40, 34, 0.4);
-  --glass: rgba(251, 252, 249, 0.82);
+  --fog: #ECECEE;
+  --fog-2: #E2E2E6;
+  --paper: #FFFFFF;
+  --ink: #1F2024;
+  --ink-2: #4A4C54;
+  --mute: #77787F;
+  --line: rgba(30, 32, 40, 0.13);
+  --line-2: rgba(30, 32, 40, 0.24);
+  --block: rgba(30, 32, 40, 0.055);
+  --moss: #F08C7B;
+  --moss-2: #E47C6A;
+  --moss-ink: #3A1D17;
+  --brass: #C2923E;
+  --brass-2: #E0BC72;
+  --brass-soft: #F5EBD6;
+  --danger: #B4443A;
+  --shadow-tile: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 1px 2px rgba(20, 22, 30, 0.07), 0 6px 18px -10px rgba(20, 22, 30, 0.25);
+  --shadow-float: 0 1px 2px rgba(20, 22, 30, 0.08), 0 18px 40px -18px rgba(20, 22, 30, 0.38);
+  --glass: rgba(255, 255, 255, 0.82);
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --spring: cubic-bezier(0.34, 1.4, 0.5, 1);
   --top: calc(64px + env(safe-area-inset-top));
-  color-scheme: light dark;
+  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --fog: #121816; --fog-2: #19211E; --paper: #1E2724; --ink: #E3EAE5; --ink-2: #B6C2BC; --mute: #82918A;
-    --line: rgba(220, 236, 228, 0.1); --line-2: rgba(220, 236, 228, 0.2); --block: rgba(220, 236, 228, 0.04);
-    --moss: #5E9A80; --moss-2: #70AC91; --moss-ink: #0E1512; --brass: #D3A85A; --brass-2: #E3C385; --brass-soft: #3A3222;
-    --danger: #E08374; --glass: rgba(30, 39, 36, 0.82);
+    --fog: #141518; --fog-2: #1B1C20; --paper: #212328; --ink: #E7E8EB; --ink-2: #B9BBC2; --mute: #8A8C94;
+    --line: rgba(230, 232, 240, 0.1); --line-2: rgba(230, 232, 240, 0.2); --block: rgba(230, 232, 240, 0.04);
+    --brass: #D6AA5C; --brass-2: #E6C688; --brass-soft: #3A3324;
+    --danger: #E58377; --glass: rgba(33, 35, 40, 0.84);
     --shadow-tile: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 20px -12px rgba(0, 0, 0, 0.6);
     --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.4), 0 18px 40px -18px rgba(0, 0, 0, 0.8);
+    color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --fog: #121816; --fog-2: #19211E; --paper: #1E2724; --ink: #E3EAE5; --ink-2: #B6C2BC; --mute: #82918A;
-  --line: rgba(220, 236, 228, 0.1); --line-2: rgba(220, 236, 228, 0.2); --block: rgba(220, 236, 228, 0.04);
-  --moss: #5E9A80; --moss-2: #70AC91; --moss-ink: #0E1512; --brass: #D3A85A; --brass-2: #E3C385; --brass-soft: #3A3222;
-  --danger: #E08374; --glass: rgba(30, 39, 36, 0.82);
+  --fog: #141518; --fog-2: #1B1C20; --paper: #212328; --ink: #E7E8EB; --ink-2: #B9BBC2; --mute: #8A8C94;
+  --line: rgba(230, 232, 240, 0.1); --line-2: rgba(230, 232, 240, 0.2); --block: rgba(230, 232, 240, 0.04);
+  --brass: #D6AA5C; --brass-2: #E6C688; --brass-soft: #3A3324;
+  --danger: #E58377; --glass: rgba(33, 35, 40, 0.84);
+  --shadow-tile: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 20px -12px rgba(0, 0, 0, 0.6);
+  --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.4), 0 18px 40px -18px rgba(0, 0, 0, 0.8);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -69,7 +74,8 @@ svg { flex: none; }
 
 .mark-bg { fill: var(--moss); }
 .mark-cells rect { fill: var(--moss-ink); opacity: 0.55; }
-.mark-core { fill: var(--brass-2); }
+.mark-core { fill: var(--paper); }
+.mark-cells rect { fill: var(--moss-ink); opacity: 0.45; }
 .pulse-mark { animation: pulse 1.4s ease-in-out infinite; }
 @keyframes pulse { 50% { transform: scale(0.92); opacity: 0.7; } }
 
@@ -313,7 +319,7 @@ button.crumb:hover { background: var(--block); color: var(--ink); }
 [data-role=center].is-done .tick svg { stroke: var(--moss); }
 
 .dots { position: absolute; left: 8%; top: 7%; display: none; grid-template-columns: repeat(3, 1fr); gap: 2px; width: clamp(12px, calc(var(--px) * 0.12px), 26px); }
-[data-role=card][data-lod=l] .dots, [data-role=card][data-lod=m] .dots { display: grid; }
+[data-role=card][data-lod=l] .dots, [data-role=card][data-lod=m] .dots, .peek[data-lod=l] .dots, .peek[data-lod=m] .dots { display: grid; }
 .dots i { aspect-ratio: 1; border-radius: 1.5px; background: var(--line); }
 .dots i.on { background: var(--mute); }
 .dots i.done { background: var(--brass); }
@@ -421,3 +427,44 @@ body:not([data-screen=editor]) #toast { bottom: calc(24px + env(safe-area-inset-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* nested-view frame changes: tiles that leave fade out */
+.cell.ghost { animation: ghost 0.38s var(--ease) forwards; }
+@keyframes ghost { to { opacity: 0; } }
+
+/* theme switch icon */
+.theme-btn .i-sun { display: none; }
+:root[data-theme="dark"] .theme-btn .i-sun { display: block; }
+:root[data-theme="dark"] .theme-btn .i-moon { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-btn .i-sun { display: block; }
+  :root:not([data-theme="light"]) .theme-btn .i-moon { display: none; }
+}
+
+/* settings */
+.settings { display: grid; gap: 22px; }
+.settings section { display: grid; gap: 10px; }
+.settings h3 { margin: 0; font-size: 14px; font-weight: 650; color: var(--ink-2); letter-spacing: 0.01em; }
+.settings .hint { margin: 0; font-size: 13px; color: var(--mute); }
+.settings .sheet-actions { margin-top: 0; }
+.seg { display: flex; padding: 3px; border-radius: 12px; background: var(--block); box-shadow: inset 0 0 0 1px var(--line); }
+.seg label { flex: 1; position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: block; text-align: center; padding: 9px 6px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--ink-2); transition: background 0.2s, color 0.2s, box-shadow 0.2s; }
+.seg input:checked + span { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+.seg input:focus-visible + span { outline: 2px solid var(--brass); outline-offset: 1px; }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px 6px; }
+.swatch { position: relative; display: grid; justify-items: center; gap: 5px; cursor: pointer; }
+.swatch > input[type=radio] { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.swatch .dot { position: relative; width: 38px; height: 38px; border-radius: 12px; background: var(--sw); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08); transition: transform 0.2s var(--spring), box-shadow 0.2s; overflow: hidden; }
+.swatch.custom .dot { background: conic-gradient(from 0deg, #f08c7b, #e3a54a, #86ae8a, #3e97a3, #5c7fe0, #9c72c9, #e27d9f, #f08c7b); }
+.swatch.custom .dot input[type=color] { position: absolute; inset: -8px; width: calc(100% + 16px); height: calc(100% + 16px); opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.swatch .sw-name { font-size: 12px; color: var(--mute); }
+.swatch > input:checked ~ .dot { transform: scale(1.06); box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--sw); }
+.swatch.custom > input:checked ~ .dot { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink-2); }
+.swatch > input:checked ~ .sw-name { color: var(--ink); font-weight: 600; }
+.swatch > input:focus-visible ~ .dot { outline: 2px solid var(--brass); outline-offset: 4px; }
+.preview { display: grid; grid-template-columns: repeat(3, 34px); gap: 5px; justify-content: start; padding-top: 4px; }
+.preview i { aspect-ratio: 1; border-radius: 9px; background: var(--paper); box-shadow: var(--shadow-tile); }
+.preview i.c { background: var(--moss); }
+.preview i.d { background: var(--brass-soft); }

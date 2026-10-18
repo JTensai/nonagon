@@ -1,12 +1,12 @@
 import { Stage } from './stage.js';
-import { computeProgress, focusRect, pathTo, countDescendants, nodeAt, contentBounds } from './layout.js';
+import { computeProgress, focusRect, pathTo, countDescendants, nodeAt, contentBounds, frameOf, lowestCommonAncestor, liveChildren, NESTED_EXTENT } from './layout.js';
 import { store, newId, blankNode } from './store.js';
 import { $, esc, toast, sheet, closeSheet, sheetOpen, confirmSheet, menu, ICONS } from './ui.js';
 import { exportImage } from './painter.js';
 import { runTour } from './tour.js';
+import { getPref, setPref, openSettings, toggleTheme, isDarkNow } from './settings.js';
 
 const MAX_TEXT = 140;
-const prefKey = 'nonagon.view';
 
 export class Editor {
   constructor(root, { onExit, readOnly = false, userId }) {
@@ -20,9 +20,7 @@ export class Editor {
     this.redoStack = [];
     this.saveTimer = 0;
     this.saving = false;
-    let pref = 'nested';
-    try { pref = localStorage.getItem(prefKey) || 'nested'; } catch {}
-    this.mode = pref === 'fractal' ? 'fractal' : 'nested';
+    this.mode = getPref('view') === 'fractal' ? 'fractal' : 'nested';
 
     const oldStage = $('.stage', root);
     const stageEl = oldStage.cloneNode(false); // fresh element, no old listeners
@@ -44,11 +42,17 @@ export class Editor {
     $('[data-act=menu]', root).onclick = (e) => this.openMenu(e.currentTarget);
     this.keyHandler = (e) => this.key(e);
     document.addEventListener('keydown', this.keyHandler);
+    this.prefHandler = (e) => {
+      if (e.detail.key === 'view' && this.board) this.setMode(e.detail.value, { silent: true });
+      if (e.detail.key === 'accent' || e.detail.key === 'theme') this.stage.render();
+    };
+    window.addEventListener('nonagon:prefs', this.prefHandler);
     root.classList.toggle('read-only', readOnly);
   }
 
   destroy() {
     document.removeEventListener('keydown', this.keyHandler);
+    window.removeEventListener('nonagon:prefs', this.prefHandler);
     this.stage.cancelAnim();
     this.stage.ro.disconnect();
     document.querySelector('.tour')?.remove();
@@ -60,6 +64,7 @@ export class Editor {
     this.undoStack = [];
     this.redoStack = [];
     this.focusId = board.rootId;
+    this.stage.frameId = board.rootId;
     this.refresh();
     // Start zoomed out a touch, then settle onto the goal.
     const t = this.target(this.focusId);
@@ -104,21 +109,39 @@ export class Editor {
     $('.board-progress span', this.root).textContent = p + '%';
   }
 
-  target(id) {
-    const r = focusRect(this.board, id, this.mode);
+  // Where the camera sits when a square is open. In the nested view this is in
+  // that square's own frame; in the fractal view it's in the shared space.
+  target(id, all = false) {
     const V = this.stage.fitSize;
-    const frac = this.mode === 'nested' ? 0.84 : 0.94;
-    return { cx: r.x, cy: r.y, w: r.s / frac, T: V * 0.6 };
+    if (this.mode === 'nested') {
+      const hasKids = liveChildren(this.board, id).length > 0;
+      // Wide screens show the whole chart around the open square; phones frame the open square.
+      const showRing = hasKids && (all || V >= 620);
+      return { cx: 0, cy: 0, w: showRing ? NESTED_EXTENT / 0.97 : 1 / 0.86, T: V * 0.6 };
+    }
+    const r = focusRect(this.board, id, this.mode);
+    return { cx: r.x, cy: r.y, w: r.s / 0.94, T: V * 0.6 };
   }
 
   // ---- navigation -------------------------------------------------------
-  focus(id, opts = {}) {
-    if (!this.board.nodes[id]) return Promise.resolve();
+  async focus(id, opts = {}) {
+    const b = this.board;
+    if (!b.nodes[id]) return;
     this.focusId = id;
     this.stage.setFocus(id);
     this.renderChrome();
     this.stage.render();
-    return this.stage.flyTo(this.target(id), opts);
+    if (this.mode !== 'nested') return this.stage.flyTo(this.target(id, opts.all), opts);
+    // Nested: step up to the nearest shared square, glide to the new square there,
+    // then redraw around it.
+    const s = this.stage;
+    const from = s.frameId && b.nodes[s.frameId] ? s.frameId : b.rootId;
+    const via = lowestCommonAncestor(b, from, id);
+    if (via !== from) s.setFrame(via);
+    const t = this.target(id, opts.all);
+    const fv = frameOf(b, via), fi = frameOf(b, id);
+    await s.flyTo({ cx: (fi.ox - fv.ox) / fv.sc, cy: (fi.oy - fv.oy) / fv.sc, w: (t.w * fi.sc) / fv.sc, T: t.T }, opts);
+    if (this.focusId === id) s.setFrame(id);
   }
 
   up() {
@@ -128,15 +151,17 @@ export class Editor {
   }
 
   overview() {
+    if (this.mode === 'nested') { this.focus(this.board.rootId, { all: true }); return; }
     const V = this.stage.fitSize;
-    const r = contentBounds(this.board, this.mode, this.focusId);
+    const r = contentBounds(this.board, this.mode);
     this.stage.flyTo({ cx: r.x, cy: r.y, w: r.s / 0.95, T: Math.max(84, V * 0.17) });
   }
 
-  // After a free pinch/pan, follow along with whatever square is now in view.
+  // After a free pinch/pan in the fractal view, follow along with whatever square is now in view.
   settle() {
+    if (this.mode === 'nested') return;
     const c = this.stage.cam;
-    const id = nodeAt(this.board, this.mode, c.cx, c.cy, c.w * (this.mode === 'nested' ? 0.5 : 0.62));
+    const id = nodeAt(this.board, this.mode, c.cx, c.cy, c.w * 0.62);
     if (id !== this.focusId) {
       this.focusId = id;
       this.stage.setFocus(id);
@@ -145,22 +170,27 @@ export class Editor {
     }
   }
 
-  toggleMode() {
-    this.mode = this.mode === 'nested' ? 'fractal' : 'nested';
-    try { localStorage.setItem(prefKey, this.mode); } catch {}
-    const before = this.stage.cam.w;
-    this.stage.mode = this.mode;
+  setMode(mode, { silent } = {}) {
+    if (mode === this.mode) return;
+    this.mode = mode;
+    this.stage.mode = mode;
+    this.stage.frameId = this.focusId;
     // Keep the same square in view: frame it instantly in the new geometry, fade, and settle.
     const t = this.target(this.focusId);
-    this.stage.flyTo({ ...t, w: t.w * 1.25 }, { instant: true });
+    this.stage.flyTo({ ...t, w: t.w * 1.2 }, { instant: true });
     this.stage.world.animate(
       [{ opacity: 0, transform: 'scale(0.97)' }, { opacity: 1, transform: 'scale(1)' }],
       { duration: 380, easing: 'cubic-bezier(.2,.7,.2,1)' },
     );
     this.stage.flyTo(t);
     this.renderChrome();
-    toast(this.mode === 'nested' ? 'Nested view: every step’s grid sits around the goal' : 'Fractal view: every square holds its own smaller grid');
-    void before;
+    if (!silent) toast(mode === 'nested' ? 'Nested view: each step\u2019s grid sits around the open square' : 'Fractal view: every square holds its own smaller grid');
+  }
+
+  toggleMode() {
+    const mode = this.mode === 'nested' ? 'fractal' : 'nested';
+    setPref('view', mode);
+    this.setMode(mode);
   }
 
   // ---- taps -------------------------------------------------------------
@@ -414,7 +444,8 @@ export class Editor {
       items.push({ label: 'Download image', icon: ICONS.image, run: () => this.download() });
       items.push({ label: 'Print', icon: ICONS.print, run: () => this.print() });
     }
-    items.push({ label: this.mode === 'nested' ? 'Switch to fractal view' : 'Switch to nested view', icon: this.mode === 'nested' ? ICONS.nest : ICONS.grid, run: () => this.toggleMode() });
+    items.push({ label: isDarkNow() ? 'Light mode' : 'Dark mode', icon: isDarkNow() ? ICONS.sun : ICONS.moon, run: () => toggleTheme() });
+    items.push({ label: 'Settings', icon: ICONS.settings, run: () => openSettings() });
     if (!this.readOnly) {
       items.push({ label: 'Show the tour', icon: ICONS.help, run: () => { this.focus(this.board.rootId).then(() => runTour(this)); } });
       items.push('-');

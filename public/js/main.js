@@ -1,3 +1,4 @@
+import './settings.js';
 import { firebaseEnabled } from './firebase.js';
 import { store } from './store.js';
 import { watchAuth, bindAuthScreen, bindVerifyScreen, needsVerify, signOut } from './auth.js';

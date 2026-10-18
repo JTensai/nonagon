@@ -1,4 +1,4 @@
-import { buildItems } from './layout.js';
+import { buildItems, frameOf } from './layout.js';
 import { interpolateZoom, easeInOut, prefersReducedMotion } from './camera.js';
 
 const LOD = (px) => (px < 40 ? 'xs' : px < 84 ? 's' : px < 150 ? 'm' : 'l');
@@ -17,6 +17,7 @@ export class Stage {
     this.board = null;
     this.progress = {};
     this.focusId = null;
+    this.frameId = null;
     this.born = new Set();
     this.anim = null;
     this.raf = 0;
@@ -63,6 +64,23 @@ export class Stage {
     this.progress = progress;
     this.setFocus(focusId);
     this.render();
+  }
+
+  // Nested view: redraw relative to another square without moving anything on
+  // screen. Tiles shared by both frames stay put; the rest fade.
+  setFrame(id) {
+    if (!this.board || id === this.frameId) return;
+    if (this.frameId && this.board.nodes[this.frameId]) {
+      const a = frameOf(this.board, this.frameId);
+      const b = frameOf(this.board, id);
+      this.cam.cx = (a.ox + a.sc * this.cam.cx - b.ox) / b.sc;
+      this.cam.cy = (a.oy + a.sc * this.cam.cy - b.oy) / b.sc;
+      this.cam.w = (this.cam.w * a.sc) / b.sc;
+    }
+    this.frameId = id;
+    this.ghostUntil = performance.now() + 60;
+    this.appearUntil = performance.now() + 450;
+    this.draw();
   }
 
   setFocus(id) {
@@ -125,7 +143,7 @@ export class Stage {
     const { ox, oy } = this.origin;
     const scale = this.scale;
     const cam = { cx: this.cam.cx, cy: this.cam.cy, scale, vw: this.vw, vh: this.vh, ox, oy, T: this.cam.T };
-    const items = buildItems(this.board, cam, this.mode, 4, this.focusId);
+    const items = buildItems(this.board, cam, this.mode, 4, this.focusId, this.frameId);
     const used = new Set();
     for (const it of items) {
       used.add(it.key);
@@ -137,8 +155,15 @@ export class Stage {
       }
       this.place(el, it, scale, ox, oy);
     }
+    const ghosting = performance.now() < (this.ghostUntil || 0);
     for (const [key, el] of this.pool) {
-      if (!used.has(key)) { el.remove(); this.pool.delete(key); }
+      if (used.has(key)) continue;
+      this.pool.delete(key);
+      if (ghosting) {
+        el.classList.add('ghost');
+        el.style.pointerEvents = 'none';
+        setTimeout(() => el.remove(), 420);
+      } else el.remove();
     }
   }
 
@@ -201,7 +226,7 @@ export class Stage {
       const isFocus = it.nodeId === focus && it.role === 'center';
       const inFocus = it.parentId === focus || it.nodeId === focus;
       let dots = '';
-      if (it.role === 'card') {
+      if (it.role === 'card' || it.peek) {
         for (let pos = 0; pos < 9; pos++) {
           if (pos === 4) { dots += '<i class="me"></i>'; continue; }
           const c = n.children[pos < 4 ? pos : pos - 1];
@@ -209,7 +234,7 @@ export class Stage {
           dots += `<i class="${cn ? (this.progress[c] >= 1 ? 'done' : 'on') : ''}"></i>`;
         }
       }
-      const sig = `${n.text}|${n.done}|${Math.round(p * 100)}|${kids.length}|${isFocus}|${inFocus}|${dots}`;
+      const sig = `${n.text}|${n.done}|${Math.round(p * 100)}|${kids.length}|${isFocus}|${inFocus}|${dots}|${!!it.peek}`;
       if (el._sig === sig) return;
       el._sig = sig;
       el.querySelector('.label').textContent = n.text;
@@ -224,6 +249,7 @@ export class Stage {
         el.classList.add('just-done');
       }
       el.classList.toggle('has-kids', kids.length > 0);
+      el.classList.toggle('peek', !!it.peek);
       el.classList.toggle('is-focus', isFocus);
       el.classList.toggle('in-focus', inFocus);
       el.tabIndex = inFocus ? 0 : -1;
