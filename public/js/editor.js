@@ -407,8 +407,13 @@ export class Editor {
       items.push({ label: 'Edit goal', icon: ICONS.edit, run: () => this.editNode(this.board.rootId) });
       items.push({ label: 'Share', icon: ICONS.share, run: () => this.share() });
     }
-    items.push({ label: 'Download image', icon: ICONS.image, run: () => this.download() });
-    items.push({ label: 'Print', icon: ICONS.print, run: () => this.print() });
+    // Embedded previews can't download files or open the print dialog.
+    let framed = true;
+    try { framed = window.self !== window.top; } catch {}
+    if (!framed) {
+      items.push({ label: 'Download image', icon: ICONS.image, run: () => this.download() });
+      items.push({ label: 'Print', icon: ICONS.print, run: () => this.print() });
+    }
     items.push({ label: this.mode === 'nested' ? 'Switch to fractal view' : 'Switch to nested view', icon: this.mode === 'nested' ? ICONS.nest : ICONS.grid, run: () => this.toggleMode() });
     if (!this.readOnly) {
       items.push({ label: 'Show the tour', icon: ICONS.help, run: () => { this.focus(this.board.rootId).then(() => runTour(this)); } });

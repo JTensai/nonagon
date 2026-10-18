@@ -22,19 +22,25 @@ let editor = null;
 const home = new Home($('#screen-home'), {
   onOpen: (b, o) => openBoard(b, o),
   onSignOut: async () => {
-    if (user?.demo) { user = null; show('auth'); history.replaceState(null, '', location.pathname); return; }
+    if (user?.demo) { user = null; show('auth'); setUrl(location.pathname, true); return; }
     await signOut();
   },
 });
 
+function setUrl(url, replace) {
+  try {
+    if (replace) history.replaceState({}, '', url);
+    else history.pushState({}, '', url);
+  } catch { /* some embedded previews block history changes */ }
+}
+
 async function openBoard(board, { fresh, replace } = {}) {
   closeSheet();
   editor?.destroy();
-  editor = new Editor($('#screen-editor'), { onExit: () => history.back(), userId: user?.uid });
+  editor = new Editor($('#screen-editor'), { onExit: () => (location.hash ? history.back() : goHome()), userId: user?.uid });
   show('editor');
   const url = `#/g/${board.id}`;
-  if (replace) history.replaceState({ board: board.id }, '', url);
-  else history.pushState({ board: board.id }, '', url);
+  setUrl(url, replace);
   editor.open(board, { tour: fresh && !tourSeen() });
 }
 
@@ -59,7 +65,7 @@ function goHome(replace) {
   editor?.destroy();
   editor = null;
   closeSheet();
-  if (replace && location.hash) history.replaceState(null, '', location.pathname + location.search);
+  if (replace && location.hash) setUrl(location.pathname + location.search, true);
   show('home');
   home.start(user);
 }
