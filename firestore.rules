@@ -33,6 +33,24 @@ service cloud.firestore {
       allow delete: if owns(resource.data);
     }
 
+    // "Request a change" submissions: /feedback/{id}
+    // Signed-in, verified users can add one. Anyone can read them, because a
+    // GitHub Action reads them with the public API key and posts each one as a
+    // public GitHub issue. No names or emails are stored.
+    function validFeedback(d) {
+      return d.keys().hasOnly(['text', 'kind', 'screen', 'createdAt'])
+        && d.keys().hasAll(['text', 'kind', 'createdAt'])
+        && d.text is string && d.text.size() >= 10 && d.text.size() <= 2000
+        && d.kind in ['idea', 'bug']
+        && (!('screen' in d) || (d.screen is string && d.screen.size() <= 40))
+        && d.createdAt == request.time;
+    }
+
+    match /feedback/{id} {
+      allow read: if true;
+      allow create: if signedIn() && verified() && validFeedback(request.resource.data);
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
