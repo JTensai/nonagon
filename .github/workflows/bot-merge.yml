@@ -1,0 +1,69 @@
+# Merges pull requests the daily Claude bot opens, then deploys.
+# Only PRs from a branch in this repo with the "autobuild" label (which only
+# collaborators and the Claude app can add) are considered, and only if
+# .github/scripts/guard.mjs, run from main, passes on the PR's changes.
+# pull_request_target runs this file from main, so a PR can't change the rules
+# it is checked against. PR code is fetched as data and never run.
+name: Bot merge
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled, ready_for_review]
+    branches: [main]
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+concurrency:
+  group: bot-merge
+jobs:
+  merge:
+    if: >-
+      contains(github.event.pull_request.labels.*.name, 'autobuild')
+      && !github.event.pull_request.draft
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Fetch the PR's changes
+        run: git fetch --no-tags origin "refs/pull/$PR/head:pr"
+      - name: Check what the PR changes
+        id: guard
+        run: |
+          set +e
+          node .github/scripts/guard.mjs main pr > guard.txt
+          code=$?
+          cat guard.txt
+          exit $code
+      - name: Hand back to a human if the check fails
+        if: failure() && steps.guard.outcome == 'failure'
+        run: |
+          gh label create needs-human --color B4443A --description "The bot can't finish this one" 2>/dev/null || true
+          { echo "The safety check stopped this from merging automatically:"; echo; sed -n '2,$p' guard.txt; echo; echo "It needs a human to review."; } > note.md
+          gh pr comment "$PR" -R "$GITHUB_REPOSITORY" --body-file note.md
+          gh pr edit "$PR" -R "$GITHUB_REPOSITORY" --remove-label autobuild --add-label needs-human
+      - name: Merge
+        run: |
+          for i in 1 2 3 4 5 6; do
+            state=$(gh pr view "$PR" -R "$GITHUB_REPOSITORY" --json mergeable -q .mergeable)
+            [ "$state" != UNKNOWN ] && break
+            sleep 10
+          done
+          if [ "$state" != MERGEABLE ]; then
+            gh pr comment "$PR" -R "$GITHUB_REPOSITORY" --body "This has merge conflicts with main, so it wasn't merged. The bot will update it on its next run."
+            exit 1
+          fi
+          gh pr merge "$PR" -R "$GITHUB_REPOSITORY" --squash --delete-branch --match-head-commit "${{ github.event.pull_request.head.sha }}"
+      - name: Deploy
+        # Merges made with the workflow token don't trigger other workflows, so start the deploy directly.
+        run: gh workflow run pages.yml -R "$GITHUB_REPOSITORY" --ref main

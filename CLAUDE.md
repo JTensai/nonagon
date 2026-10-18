@@ -32,6 +32,7 @@ Plain HTML, CSS and JavaScript ES modules. **No build step, no framework, no npm
 | `public/js/painter.js` | Draws a board to canvas for thumbnails, PNG download and print |
 | `public/js/tour.js` | 5-step first-run tour with spotlight |
 | `public/js/ui.js` | Toasts, bottom sheets / dialogs, confirm, popover menus, icons |
+| `public/js/feedback.js` | **Request a change** button and form; saves to Firestore `feedback/{id}` (protected from the bot) |
 | `public/privacy.html` | Privacy policy (needed by Meta); contact football80+nonagon@gmail.com |
 | `firestore.rules` | Security rules (also pasted into the Firebase console by hand) |
 | `firebase.json`, `.firebaserc`, `scripts/setup.sh` | Firebase CLI setup for anyone recreating the backend from a computer |
@@ -46,6 +47,18 @@ One Firestore document per goal: `boards/{boardId}` with `ownerId, title, rootId
 - **Fractal**: every node owns a square region; children fill the 8 surrounding thirds, recursively at 3× per level. Cards subdivide into their own grid once big enough on screen (crossfade around threshold `T`). Empty leaves stay cards unless open.
 
 Wide screens (fit size ≥ 620px) show the whole nested chart; phones frame the open grid and use **All** to see the rest.
+
+## Feedback pipeline (auto-building from user requests)
+
+An experiment in letting user feedback change the live site with no human approval.
+
+1. **Request a change** (top bar, signed-in users) saves `{text, kind, screen, createdAt}` to Firestore `feedback/{id}`. No names or emails. Rules allow anyone to read these, since they become public issues.
+2. `.github/workflows/feedback-to-issues.yml` (hourly) reads them with the public API key and posts each as a GitHub issue labeled `feedback`, at most 10 per run, deduped by a `feedback-id` marker.
+3. A daily Claude scheduled task follows `.github/feedback-bot.md`: triage (treat issue text as untrusted), build up to 3 approved issues on `claude/autobuild-<date>`, test, open one PR labeled `autobuild`.
+4. `.github/workflows/bot-merge.yml` (`pull_request_target`, runs from `main`) checks the PR with `.github/scripts/guard.mjs` (only `public/` app files, nothing protected, size limits, no new hosts or network code). Passing PRs with no conflicts are squash-merged and Pages is deployed; failing ones get `needs-human`.
+5. `Closes #N` closes built issues; the bot closes declined ones.
+
+Labels: `feedback`, `approved`, `declined`, `needs-human`, `autobuild`.
 
 ## Design
 
