@@ -53,7 +53,10 @@ export function sheet({ title, body, onClose, wide }) {
     if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(); }
   };
   document.addEventListener('keydown', onKey, true);
-  scrim.onclick = () => close();
+  // A touch tap that opens a sheet is followed by a click at the same spot,
+  // which now lands on the scrim; ignore it so the sheet doesn't close at once.
+  const openedAt = performance.now();
+  scrim.onclick = () => { if (performance.now() - openedAt > 400) close(); };
   openSheet = { el, close };
   setTimeout(() => {
     const f = el.querySelector('[autofocus], textarea, input, button.primary');

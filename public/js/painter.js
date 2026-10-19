@@ -99,6 +99,7 @@ export function paintBoard(canvas, board, { mode = 'nested', size = 1600, pad = 
     const center = it.role === 'center';
     ctx.fillStyle = center ? C.moss : p >= 1 ? C.brassSoft : C.paper;
     rr(ctx, x, y, w, w, r); ctx.fill();
+    if (!center && p < 1) { ctx.globalAlpha = 0.12; ctx.fillStyle = C.moss; ctx.fill(); ctx.globalAlpha = 1; } // accent tint, as --step
     const hasKids = n.children.some((k) => k && board.nodes[k]);
     if ((hasKids || p > 0) && w > 14) {
       const bh = Math.max(1.5, w * 0.025);

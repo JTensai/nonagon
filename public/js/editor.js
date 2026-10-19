@@ -7,6 +7,7 @@ import { runTour } from './tour.js';
 import { getPref, setPref, openSettings, toggleTheme, isDarkNow } from './settings.js';
 
 const MAX_TEXT = 140;
+const MAX_NOTE = 2000;
 
 export class Editor {
   constructor(root, { onExit, readOnly = false, userId }) {
@@ -29,6 +30,7 @@ export class Editor {
       onTap: (it) => this.tap(it),
       onLongPress: (it) => this.longPress(it),
       onTick: (id) => this.toggleDone(id),
+      onNote: (id) => this.openNotes(id),
       onSettle: () => this.settle(),
     });
     this.stage.mode = this.mode;
@@ -332,15 +334,70 @@ export class Editor {
       extra: `
         <div class="sheet-row">
           <button type="button" class="btn ghost" data-x="done">${complete ? 'Mark not done' : 'Mark done'}</button>
+          <button type="button" class="btn ghost" data-x="notes">${n.note ? 'Edit notes' : 'Add notes'}</button>
           ${isRoot ? '' : `<button type="button" class="btn ghost danger-text" data-x="delete">Delete${descendants ? ` (+${descendants})` : ''}</button>`}
         </div>`,
       onSubmit: (text) => { if (text !== n.text) this.setText(id, text); },
       onExtra: (x, close) => {
         close();
         if (x === 'done') this.toggleDone(id);
+        if (x === 'notes') this.openNotes(id);
         if (x === 'delete') this.deleteNode(id);
       },
     });
+  }
+
+  setNote(id, note) {
+    this.begin();
+    if (note) this.board.nodes[id].note = note;
+    else delete this.board.nodes[id].note;
+    this.commit('editing notes');
+  }
+
+  openNotes(id) {
+    const n = this.board.nodes[id];
+    if (!n) return;
+    if (this.readOnly) {
+      if (!n.note) return;
+      const s = sheet({
+        title: 'Notes',
+        body: `<p class="sheet-text">${esc(n.text)}</p><p class="notes-text">${esc(n.note)}</p>
+          <div class="sheet-actions"><button type="button" class="btn primary" data-x="close">Close</button></div>`,
+      });
+      s.el.querySelector('[data-x=close]').onclick = () => s.close();
+      return;
+    }
+    const s = sheet({
+      title: 'Notes',
+      body: `
+        <form class="text-form">
+          <p class="sheet-text">${esc(n.text)}</p>
+          <div class="field notes-field">
+            <textarea rows="6" maxlength="${MAX_NOTE}" aria-label="Notes" placeholder="Details, links, ideas, anything worth remembering">${esc(n.note || '')}</textarea>
+            <span class="count"></span>
+          </div>
+          <div class="sheet-actions">
+            <button type="button" class="btn ghost" data-x="cancel">Cancel</button>
+            <button type="submit" class="btn primary">Save notes</button>
+          </div>
+        </form>`,
+    });
+    const ta = s.el.querySelector('textarea');
+    const count = s.el.querySelector('.count');
+    const upd = () => { count.textContent = `${ta.value.length}/${MAX_NOTE}`; };
+    upd();
+    ta.addEventListener('input', upd);
+    setTimeout(() => { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 80);
+    s.el.querySelector('form').onsubmit = (e) => {
+      e.preventDefault();
+      const note = ta.value.trim();
+      s.close(true);
+      if (note !== (n.note || '')) {
+        this.setNote(id, note);
+        toast(note ? 'Notes saved' : 'Notes removed');
+      }
+    };
+    s.el.querySelector('[data-x=cancel]').onclick = () => s.close();
   }
 
   async deleteNode(id) {
