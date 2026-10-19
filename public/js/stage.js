@@ -7,7 +7,7 @@ const LOD = (px) => (px < 40 ? 'xs' : px < 84 ? 's' : px < 150 ? 'm' : 'l');
 export class Stage {
   constructor(el, handlers) {
     this.el = el;
-    this.h = handlers; // { onTap(item), onLongPress(item), onTick(nodeId), onSettle() }
+    this.h = handlers; // { onTap(item), onLongPress(item), onTick(nodeId), onNote(nodeId), onSettle() }
     this.world = document.createElement('div');
     this.world.className = 'world';
     el.append(this.world);
@@ -183,7 +183,8 @@ export class Stage {
       face.innerHTML =
         '<span class="label"></span><span class="pct"></span>' +
         '<i class="bar"><b></b></i><span class="dots"></span>' +
-        '<button class="tick" type="button" tabindex="-1" aria-label="Mark done"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.4l3 3 6-6.6"/></svg></button>';
+        '<button class="tick" type="button" tabindex="-1" aria-label="Mark done"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.4l3 3 6-6.6"/></svg></button>' +
+        '<button class="note-btn" type="button" tabindex="-1" aria-label="Open notes"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5h6l2.5 2.5v8.5H4z"/><path d="M6.2 7.5h4M6.2 10h3"/></svg></button>';
       if (this.born.has(it.nodeId) && it.role !== 'center') {
         el.classList.add('born');
         setTimeout(() => el.classList.remove('born'), 700);
@@ -234,7 +235,7 @@ export class Stage {
           dots += `<i class="${cn ? (this.progress[c] >= 1 ? 'done' : 'on') : ''}"></i>`;
         }
       }
-      const sig = `${n.text}|${n.done}|${Math.round(p * 100)}|${kids.length}|${isFocus}|${inFocus}|${dots}|${!!it.peek}`;
+      const sig = `${n.text}|${n.done}|${Math.round(p * 100)}|${kids.length}|${isFocus}|${inFocus}|${dots}|${!!it.peek}|${!!n.note}`;
       if (el._sig === sig) return;
       el._sig = sig;
       el.querySelector('.label').textContent = n.text;
@@ -250,11 +251,12 @@ export class Stage {
       }
       el.classList.toggle('has-kids', kids.length > 0);
       el.classList.toggle('peek', !!it.peek);
+      el.classList.toggle('has-note', !!n.note);
       el.classList.toggle('is-focus', isFocus);
       el.classList.toggle('in-focus', inFocus);
       el.tabIndex = inFocus ? 0 : -1;
       el.setAttribute('role', 'button');
-      el.setAttribute('aria-label', `${n.text}${p >= 1 ? ', done' : kids.length ? `, ${Math.round(p * 100)}% done` : ''}`);
+      el.setAttribute('aria-label', `${n.text}${p >= 1 ? ', done' : kids.length ? `, ${Math.round(p * 100)}% done` : ''}${n.note ? ', has notes' : ''}`);
       el._painted = true;
     } else if (it.kind === 'empty') {
       const inFocus = it.parentId === focus;
@@ -304,7 +306,7 @@ export class Stage {
       const cell = e.target.closest?.('.cell');
       this.gesture = {
         type: 'tap', sx: e.clientX, sy: e.clientY, rect,
-        cam: { ...this.cam }, target: cell, tick: e.target.closest?.('.tick'),
+        cam: { ...this.cam }, target: cell, tick: e.target.closest?.('.tick'), note: e.target.closest?.('.note-btn'),
         timer: setTimeout(() => {
           if (this.gesture && this.gesture.type === 'tap' && cell?._item) {
             this.gesture.type = 'done';
@@ -371,6 +373,7 @@ export class Stage {
     if (g.type === 'tap' && g.target?._item) {
       const it = g.target._item;
       if (g.tick && it.kind === 'node') this.h.onTick?.(it.nodeId);
+      else if (g.note && it.kind === 'node') this.h.onNote?.(it.nodeId);
       else this.h.onTap(it);
     } else if (g.type === 'pan') {
       this.h.onSettle?.();
