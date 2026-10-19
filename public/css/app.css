@@ -1,6 +1,7 @@
 /* Nonagon: calm, premium goal grids.
    Neutral greys so any accent works; the accent marks the open square. Gold marks progress.
-   The accent (--moss, --moss-2, --moss-ink) is set from Settings by js/settings.js. */
+   The accent (--moss, --moss-2, --moss-ink) is set from Settings by js/settings.js;
+   --step tints the surrounding squares with it. */
 :root {
   --font: 'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --fog: #ECECEE;
@@ -15,6 +16,7 @@
   --moss: #F08C7B;
   --moss-2: #E47C6A;
   --moss-ink: #3A1D17;
+  --step: color-mix(in srgb, var(--moss) 12%, var(--paper));
   --brass: #C2923E;
   --brass-2: #E0BC72;
   --brass-soft: #F5EBD6;
@@ -33,6 +35,7 @@
     --line: rgba(230, 232, 240, 0.1); --line-2: rgba(230, 232, 240, 0.2); --block: rgba(230, 232, 240, 0.04);
     --brass: #D6AA5C; --brass-2: #E6C688; --brass-soft: #3A3324;
     --danger: #E58377; --glass: rgba(33, 35, 40, 0.84);
+    --step: color-mix(in srgb, var(--moss) 14%, var(--paper));
     --shadow-tile: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 20px -12px rgba(0, 0, 0, 0.6);
     --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.4), 0 18px 40px -18px rgba(0, 0, 0, 0.8);
     color-scheme: dark;
@@ -43,6 +46,7 @@
   --line: rgba(230, 232, 240, 0.1); --line-2: rgba(230, 232, 240, 0.2); --block: rgba(230, 232, 240, 0.04);
   --brass: #D6AA5C; --brass-2: #E6C688; --brass-soft: #3A3324;
   --danger: #E58377; --glass: rgba(33, 35, 40, 0.84);
+  --step: color-mix(in srgb, var(--moss) 14%, var(--paper));
   --shadow-tile: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 20px -12px rgba(0, 0, 0, 0.6);
   --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.4), 0 18px 40px -18px rgba(0, 0, 0, 0.8);
   color-scheme: dark;
@@ -275,7 +279,7 @@ button.crumb:hover { background: var(--block); color: var(--ink); }
 .k-node[data-role=card] { z-index: 1; }
 .k-empty { z-index: 2; }
 
-.k-node .face { background: var(--paper); box-shadow: var(--shadow-tile); padding: 10% 9% 12%; }
+.k-node .face { background: var(--step); box-shadow: var(--shadow-tile); padding: 10% 9% 12%; }
 @media (hover: hover) {
   .k-node:hover .face { transform: translateY(-1px); box-shadow: var(--shadow-float); }
   .k-empty.in-focus:hover .face { box-shadow: inset 0 0 0 1.5px var(--moss); background: color-mix(in srgb, var(--moss) 6%, transparent); }
@@ -469,7 +473,7 @@ body:not([data-screen=editor]) #toast { bottom: calc(24px + env(safe-area-inset-
 .swatch > input:checked ~ .sw-name { color: var(--ink); font-weight: 600; }
 .swatch > input:focus-visible ~ .dot { outline: 2px solid var(--brass); outline-offset: 4px; }
 .preview { display: grid; grid-template-columns: repeat(3, 34px); gap: 5px; justify-content: start; padding-top: 4px; }
-.preview i { aspect-ratio: 1; border-radius: 9px; background: var(--paper); box-shadow: var(--shadow-tile); }
+.preview i { aspect-ratio: 1; border-radius: 9px; background: var(--step); box-shadow: var(--shadow-tile); }
 .preview i.c { background: var(--moss); }
 .preview i.d { background: var(--brass-soft); }
 
