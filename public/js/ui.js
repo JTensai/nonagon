@@ -46,6 +46,7 @@ export function sheet({ title, body, onClose, wide }) {
     setTimeout(() => { scrim.remove(); el.remove(); }, 260);
     if (openSheet && openSheet.el === el) openSheet = null;
     document.removeEventListener('keydown', onKey, true);
+    window.visualViewport?.removeEventListener('resize', onViewport);
     prevFocus?.focus?.({ preventScroll: true });
     if (!silent) onClose?.();
   };
@@ -53,16 +54,41 @@ export function sheet({ title, body, onClose, wide }) {
     if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(); }
   };
   document.addEventListener('keydown', onKey, true);
+  // Keep the focused text box in view when the on-screen keyboard opens.
+  const onViewport = () => {
+    const a = document.activeElement;
+    if (a && el.contains(a) && a.matches('textarea, input')) a.scrollIntoView({ block: 'nearest' });
+  };
+  window.visualViewport?.addEventListener('resize', onViewport);
   // A touch tap that opens a sheet is followed by a click at the same spot,
   // which now lands on the scrim; ignore it so the sheet doesn't close at once.
   const openedAt = performance.now();
-  scrim.onclick = () => { if (performance.now() - openedAt > 400) close(); };
+  // While a text box has the keyboard up, a tap outside only hides the
+  // keyboard. On Android the keyboard can cover the sheet or hand back focus
+  // oddly (voice typing), and closing then would throw away what was typed.
+  // (The tap itself moves focus off the text box, so check on pointerdown.)
+  let typing = false;
+  scrim.onpointerdown = (e) => {
+    if (e.pointerType === 'mouse') { typing = false; return; }
+    const a = document.activeElement;
+    typing = !!a && el.contains(a) && a.matches('textarea, input[type=text], input:not([type])');
+  };
+  scrim.onclick = () => {
+    if (performance.now() - openedAt <= 400) return;
+    if (typing) { typing = false; document.activeElement?.blur?.(); return; }
+    close();
+  };
   openSheet = { el, close };
   setTimeout(() => {
     const f = el.querySelector('[autofocus], textarea, input, button.primary');
     f?.focus({ preventScroll: true });
   }, 60);
   return { el, close };
+}
+// Enter submits, except while the keyboard is still composing a word (Android
+// keyboards and voice typing send Enter-like keys mid-composition).
+export function isSubmitEnter(e) {
+  return e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229;
 }
 export function closeSheet() { openSheet?.close(true); }
 export function sheetOpen() { return !!openSheet; }
