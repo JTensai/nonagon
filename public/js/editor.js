@@ -1,7 +1,7 @@
 import { Stage } from './stage.js';
 import { computeProgress, focusRect, pathTo, countDescendants, nodeAt, contentBounds, frameOf, lowestCommonAncestor, liveChildren, NESTED_EXTENT } from './layout.js';
 import { store, newId, blankNode } from './store.js';
-import { $, esc, toast, sheet, closeSheet, sheetOpen, confirmSheet, menu, ICONS } from './ui.js';
+import { $, esc, toast, sheet, closeSheet, sheetOpen, confirmSheet, menu, ICONS, isSubmitEnter } from './ui.js';
 import { exportImage } from './painter.js';
 import { runTour } from './tour.js';
 import { getPref, setPref, openSettings, toggleTheme, isDarkNow } from './settings.js';
@@ -447,7 +447,7 @@ export class Editor {
     upd();
     ta.addEventListener('input', upd);
     ta.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); s.el.querySelector('form').requestSubmit(); }
+      if (isSubmitEnter(e)) { e.preventDefault(); s.el.querySelector('form').requestSubmit(); }
     });
     setTimeout(() => { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 80);
     s.el.querySelector('form').onsubmit = (e) => {

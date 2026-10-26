@@ -1,4 +1,4 @@
-import { $, esc, sheet, toast, menu, ICONS } from './ui.js';
+import { $, esc, sheet, toast, menu, ICONS, isSubmitEnter } from './ui.js';
 import { store, makeBoard, exampleBoard } from './store.js';
 import { computeProgress, depthOf } from './layout.js';
 import { paintBoard } from './painter.js';
@@ -86,7 +86,7 @@ export class Home {
         </form>`,
     });
     const ta = s.el.querySelector('textarea');
-    ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); s.el.querySelector('form').requestSubmit(); } });
+    ta.addEventListener('keydown', (e) => { if (isSubmitEnter(e)) { e.preventDefault(); s.el.querySelector('form').requestSubmit(); } });
     s.el.querySelector('[data-x=cancel]').onclick = () => s.close();
     s.el.querySelector('form').onsubmit = (e) => {
       e.preventDefault();
